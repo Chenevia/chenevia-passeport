@@ -210,16 +210,17 @@
     var ICONE_NON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>';
 
     function sectionChiffres(A) {
-      var t = totaux(A.cannabinoides), conforme = t.thc <= LIMITE_THC;
-      var largeur = Math.min(100, t.thc / (LIMITE_THC * 1.5) * 100), limite = LIMITE_THC / (LIMITE_THC * 1.5) * 100;
+      var LIM = Number(A.limite_thc) || LIMITE_THC;   // limite des réglages de l'appli, 0,3 % sinon
+      var t = totaux(A.cannabinoides), conforme = t.thc <= LIM;
+      var largeur = Math.min(100, t.thc / (LIM * 1.5) * 100), limite = LIM / (LIM * 1.5) * 100;
       return '<div class="carte"><p class="surtitre">En un coup d\'œil</p><div class="tuiles">'
         + '<div class="tuile"><small>CBD total</small><b>' + nombre(t.cbd, 2) + ' %</b><span>m/m</span></div>'
         + '<div class="tuile"><small>CBG total</small><b>' + nombre(t.cbg, 2) + ' %</b><span>m/m</span></div>'
         + '<div class="tuile"><small>THC total</small><b>' + nombre(t.thc, 2) + ' %</b><span>m/m</span></div></div>'
-        + '<div class="metre"><div class="metre-tete"><span>THC total : ' + nombre(t.thc, 3) + ' %</span><span>limite légale ' + nombre(LIMITE_THC, 2) + ' %</span></div>'
-        + '<div class="metre-piste" role="img" aria-label="THC total ' + nombre(t.thc, 3) + ' % pour une limite de ' + nombre(LIMITE_THC, 2) + ' %">'
+        + '<div class="metre"><div class="metre-tete"><span>THC total : ' + nombre(t.thc, 3) + ' %</span><span>limite légale ' + nombre(LIM, 2) + ' %</span></div>'
+        + '<div class="metre-piste" role="img" aria-label="THC total ' + nombre(t.thc, 3) + ' % pour une limite de ' + nombre(LIM, 2) + ' %">'
         + '<i style="width:' + largeur + '%"></i><span class="metre-limite" style="left:' + limite + '%"></span></div></div>'
-        + '<span class="statut ' + (conforme ? 'bon' : 'critique') + '">' + (conforme ? ICONE_OK + 'Conforme : THC total sous la limite de 0,3 %' : ICONE_NON + 'Non conforme : THC total au-dessus de 0,3 %') + '</span>'
+        + '<span class="statut ' + (conforme ? 'bon' : 'critique') + '">' + (conforme ? ICONE_OK + 'Conforme : THC total sous la limite de ' + nombre(LIM, 2) + ' %' : ICONE_NON + 'Non conforme : THC total au-dessus de ' + nombre(LIM, 2) + ' %') + '</span>'
         + '</div>';
     }
 
@@ -330,7 +331,7 @@
       try { A = D.analyses ? JSON.parse(D.analyses) : null; } catch (x) { A = null; }
       if (A) A.certificats.forEach(function (c) { ['prelevement', 'reception', 'analyse', 'edition'].forEach(function (k) { c[k] = new Date(c[k]); }); });
       else A = analyseExemple(D);
-      var conforme = A.cannabinoides ? totaux(A.cannabinoides).thc <= LIMITE_THC : null;
+      var conforme = A.cannabinoides ? totaux(A.cannabinoides).thc <= (Number(A.limite_thc) || LIMITE_THC) : null;
       afficher('<div class="carte"><p class="surtitre">Sachet</p><h1>' + e(D.variete) + '</h1><div class="poids">' + e(poids(D.poids_g)) + '</div>'
         + '<div class="infos"><div><small>Identifiant</small><b>' + e(D.id) + '</b></div>'
         + '<div><small>Année de culture</small><b>' + (D.annee_culture ? e(D.annee_culture) : '—') + '</b></div></div>'
