@@ -296,8 +296,9 @@
       var v = I.variete || {}, tuiles = [];
       if (I.a_facon) {
         return '<div class="carte"><p class="surtitre">Origine</p><p class="vide" style="margin:0">Matière confiée par un client et transformée par Chenevia '
-          + '(lyophilisation à façon).</p></div>';
+          + '(lyophilisation à façon).</p>' + (I.pays_origine ? '<div class="infos texte">' + tuileInfo('Pays d\'origine du lot', I.pays_origine) + '</div>' : '') + '</div>';
       }
+      if (I.pays_origine) tuiles.push(tuileInfo('Pays d\'origine', I.pays_origine));
       if (I.culture && I.culture.mode) tuiles.push(tuileInfo('Culture', I.culture.mode + (I.culture.region ? ' · ' + I.culture.region : '')));
       if (v.categorie === 'Catalogue UE') tuiles.push(tuileInfo('Variété', 'Inscrite au catalogue commun des variétés de l\'UE', v.reference ? 'Référence ' + v.reference : ' '));
       if (!tuiles.length) return '';
@@ -328,10 +329,12 @@
         + '<p class="note">Périmètre : l\'électricité de la lyophilisation seulement. La culture, le transport et l\'emballage ne sont pas comptés.</p></div>';
     }
     function mentions(I) {
+      // Mentions demandées sur le contenant par la proposition de loi « casier chanvrier » (R-CAS-3)
       return '<div class="mentions">'
         + (I.usage === 'Fleurs à fumer' ? '<p class="avertissement">Fumer ce produit nuit à votre santé.</p>' : '')
-        + (I.usage === 'Infusion' ? '<p>Usage prévu : infusion.</p>' : '')
-        + '<p>Réservé aux adultes (18 ans et plus).</p><p>Ce produit ne revendique aucune propriété thérapeutique.</p></div>';
+        + (I.usage === 'Matière première (professionnels)' && !I.a_facon ? '<p><b>Matière première destinée aux professionnels. Ne pas ingérer.</b></p>' : '')
+        + '<p>Vente interdite aux mineurs de moins de 18 ans.</p><p>Consommation déconseillée aux femmes enceintes.</p>'
+        + '<p>Ce produit ne revendique aucune propriété thérapeutique.</p></div>';
     }
 
     // ---------- Page ----------
@@ -355,7 +358,8 @@
       afficher('<div class="carte"><p class="surtitre">' + (echantillon ? 'Échantillon' : 'Sachet') + '</p><h1>' + e(D.variete) + '</h1><div class="poids">' + e(poids(D.poids_g)) + '</div>'
         + (echantillon ? '<div class="echantillon">ÉCHANTILLON — NE PEUT ÊTRE VENDU</div>' : '')
         + '<div class="infos"><div><small>Identifiant</small><b>' + e(D.id) + '</b></div>'
-        + '<div><small>Année de culture</small><b>' + (D.annee_culture ? e(D.annee_culture) : '—') + '</b></div></div>'
+        + '<div><small>Année de culture</small><b>' + (D.annee_culture ? e(D.annee_culture) : '—') + '</b></div>'
+        + (I.lot ? '<div><small>N° de lot</small><b>' + e(I.lot) + '</b></div>' : '') + '</div>'
         + (conforme === null ? '' : '<span class="statut ' + (conforme ? 'bon' : 'critique') + '">' + (conforme ? ICONE_OK + 'Analysé · conforme' : ICONE_NON + 'Analysé · non conforme') + '</span>') + '</div>'
         + (A && A.cannabinoides ? sectionChiffres(A) + sectionCannabinoides(A) : sectionAnalyseEnCours())
         + (A && A.terpenes_mg_g ? sectionTerpenes(A) : '')
