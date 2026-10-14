@@ -17,7 +17,8 @@
     .echantillon { background: #111827; color: #fff; text-align: center; font-weight: 800; letter-spacing: .08em; padding: 12px 16px; border-radius: 12px; margin: 12px 0 0; }
     .test { background: #fef3c7; color: #92400e; text-align: center; font-size: 13px; font-weight: 600; padding: 8px 16px; }
     .page { max-width: 620px; margin: 0 auto; padding: 24px 16px 48px; }
-    .logo { display: block; height: 34px; margin: 6px auto 24px; mix-blend-mode: multiply; }
+    .logo { display: block; height: 34px; margin: 6px auto 0; mix-blend-mode: multiply; }
+    .slogan-logo { text-align: center; color: var(--texte-2); font-size: 12.5px; letter-spacing: .04em; margin: 6px 0 22px; }
     .carte { background: var(--carte); border: 1px solid var(--bord); border-radius: 20px; padding: 22px; margin-bottom: 16px; }
     .surtitre { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--texte-2); font-weight: 600; margin: 0 0 12px; }
     h1 { font-size: 34px; margin: 0; line-height: 1.1; }
@@ -319,8 +320,8 @@
 
     // ---------- Page ----------
     function afficher(contenu) {
-      document.getElementById('page').innerHTML = '<img class="logo" src="' + LOGO + '" alt="Chenevia">' + contenu
-        + '<div class="pied">CHENEVIA · TRAÇABILITÉ</div><div class="slogan">Built on science · Designed for patients</div>';
+      document.getElementById('page').innerHTML = '<img class="logo" src="' + LOGO + '" alt="Chenevia"><div class="slogan-logo">Built on science · Designed for patients</div>' + contenu
+        + '<div class="pied">CHENEVIA · TRAÇABILITÉ</div>';
     }
     function introuvable() {
       afficher('<div class="carte"><h1 style="font-size:24px">Sachet introuvable</h1>'
