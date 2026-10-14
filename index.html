@@ -14,6 +14,7 @@
     }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'DM Sans', system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+    .echantillon { background: #111827; color: #fff; text-align: center; font-weight: 800; letter-spacing: .08em; padding: 12px 16px; border-radius: 12px; margin: 12px 0 0; }
     .test { background: #fef3c7; color: #92400e; text-align: center; font-size: 13px; font-weight: 600; padding: 8px 16px; }
     .page { max-width: 620px; margin: 0 auto; padding: 24px 16px 48px; }
     .logo { display: block; height: 34px; margin: 6px auto 24px; mix-blend-mode: multiply; }
@@ -332,7 +333,9 @@
       if (A) A.certificats.forEach(function (c) { ['prelevement', 'reception', 'analyse', 'edition'].forEach(function (k) { c[k] = new Date(c[k]); }); });
       else A = analyseExemple(D);
       var conforme = A.cannabinoides ? totaux(A.cannabinoides).thc <= (Number(A.limite_thc) || LIMITE_THC) : null;
-      afficher('<div class="carte"><p class="surtitre">Sachet</p><h1>' + e(D.variete) + '</h1><div class="poids">' + e(poids(D.poids_g)) + '</div>'
+      var echantillon = /^ECH-/.test(String(D.id));   // envoyé en échantillon par Chenevia (R-STK-7)
+      afficher('<div class="carte"><p class="surtitre">' + (echantillon ? 'Échantillon' : 'Sachet') + '</p><h1>' + e(D.variete) + '</h1><div class="poids">' + e(poids(D.poids_g)) + '</div>'
+        + (echantillon ? '<div class="echantillon">ÉCHANTILLON — NE PEUT ÊTRE VENDU</div>' : '')
         + '<div class="infos"><div><small>Identifiant</small><b>' + e(D.id) + '</b></div>'
         + '<div><small>Année de culture</small><b>' + (D.annee_culture ? e(D.annee_culture) : '—') + '</b></div></div>'
         + (conforme === null ? '' : '<span class="statut ' + (conforme ? 'bon' : 'critique') + '">' + (conforme ? ICONE_OK + 'Analysé · conforme' : ICONE_NON + 'Analysé · non conforme') + '</span>') + '</div>'
@@ -356,7 +359,7 @@
     }
 
     var id = identifiantDemande();
-    if (!/^S\d{6}-\d{4}$/.test(id)) introuvable();
+    if (!/^S\d{6}-\d{4}$/.test(id) && !/^ECH-\d{6}-\d{2,3}(-\d+)?$/.test(id)) introuvable();
     else if (!URL_CSV) afficher('<div class="carte vide">Page en cours de mise en service.</div>');
     else {
       fetch(URL_CSV, { cache: 'no-store' })
