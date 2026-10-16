@@ -316,6 +316,7 @@
       }
       if (I.lyophilisation_debut) t.push(tuileInfo('Lyophilisation', I.lyophilisation_debut + (I.lyophilisation_fin && I.lyophilisation_fin !== I.lyophilisation_debut ? ' → ' + I.lyophilisation_fin : '')));
       if (I.conditionnement) t.push(tuileInfo('Mise en sachet', I.conditionnement));
+      if (I.irradiation) t.push(tuileInfo('Traitement', 'Ionisation (irradiation)' + (I.irradiation.date ? ' le ' + I.irradiation.date : ' avant réception')));   // R-IRR-1
       if (I.humidite_pct !== null && I.humidite_pct !== undefined) t.push(tuileInfo('Humidité finale', nombre(I.humidite_pct, 1) + ' %'));
       if (I.contaminants) t.push(tuileInfo('Contaminants', I.contaminants === 'conformes' ? 'Analysés · conformes' : I.contaminants === 'non conformes' ? 'Analysés · non conformes' : 'Non analysés'));
       if (!t.length && !I.conservation) return '';
