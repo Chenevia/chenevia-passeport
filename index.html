@@ -349,7 +349,7 @@
     function introuvable(nouvelEssai) {
       afficher('<div class="carte"><h1 style="font-size:24px">Sachet introuvable</h1>'
         + '<p class="vide">Ce code ne correspond à aucun sachet enregistré. Vérifiez l\'étiquette ou contactez Chenevia. '
-        + 'Un sachet tout juste conditionné peut mettre quelques minutes à apparaître.'
+        + 'Un sachet tout juste conditionné peut mettre jusqu\'à 15 minutes à apparaître.'
         + (nouvelEssai ? ' Nouvel essai automatique dans 30 secondes…' : '') + '</p></div>');
     }
     function fiche(D) {
@@ -390,7 +390,8 @@
     else {
       // Google sert la version publiée depuis plusieurs serveurs, mis à jour à quelques minutes d'écart : un sachet tout juste
       // conditionné peut manquer sur l'un d'eux. On redemande donc (adresse unique à chaque fois) avant de conclure, puis, s'il
-      // manque encore, on réessaie tout seul toutes les 30 s pendant 5 min.
+      // manque encore, on réessaie tout seul toutes les 30 s pendant 15 min (Manu, 17/10/2026 : la copie publiée par Google a
+      // déjà mis plus de 5 min à se mettre à jour).
       var essais = 0, debut = Date.now();
       var lireUn = function (url) {
         return fetch(url + '&t=' + Date.now() + '-' + essais, { cache: 'no-store' })
@@ -408,7 +409,7 @@
         chercher().then(function (D) {
           if (D) return fiche(D);
           if (essais < 4) return setTimeout(tenter, 1500);                     // autre serveur, peut-être à jour
-          if (Date.now() - debut < 5 * 60000) { introuvable(true); return setTimeout(tenter, 30000); }
+          if (Date.now() - debut < 15 * 60000) { introuvable(true); return setTimeout(tenter, 30000); }
           introuvable(false);
         }).catch(function () {
           if (essais < 4) return setTimeout(tenter, 1500);
