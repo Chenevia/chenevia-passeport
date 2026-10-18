@@ -15,6 +15,8 @@
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'DM Sans', system-ui, sans-serif; background: var(--fond); color: var(--texte); }
     .echantillon { background: #111827; color: #fff; text-align: center; font-weight: 800; letter-spacing: .08em; padding: 12px 16px; border-radius: 12px; margin: 12px 0 0; }
+    .rappel { border: 2px solid var(--critique); background: var(--critique-fond); }
+    .rappel h2 { color: var(--critique); margin: 4px 0 8px; }
     .test { background: #fef3c7; color: #92400e; text-align: center; font-size: 13px; font-weight: 600; padding: 8px 16px; }
     .page { max-width: 620px; margin: 0 auto; padding: 24px 16px 48px; }
     .logo { display: block; height: 34px; margin: 6px auto 0; mix-blend-mode: multiply; }
@@ -409,12 +411,15 @@
       try { I = D.infos ? JSON.parse(D.infos) || {} : {}; } catch (x) { I = {}; }
       var conforme = A && A.cannabinoides ? totaux(A.cannabinoides).thc <= (Number(A.limite_thc) || LIMITE_THC) : null;
       var echantillon = /^ECH-/.test(String(D.id));   // envoyé en échantillon par Chenevia (R-STK-7)
-      afficher('<div class="carte"><p class="surtitre">' + (echantillon ? 'Échantillon' : 'Sachet') + '</p><h1>' + e(D.variete) + '</h1><div class="poids">' + e(poids(D.poids_g)) + '</div>'
+      var rappel = String(D.rappel || '').trim();      // date du rappel de lot (R-RAP-1) ; ni motif ni n° de rappel ici
+      afficher((rappel ? '<div class="carte rappel" role="alert"><p class="surtitre">Rappel de produit</p><h2>Ce produit est rappelé depuis le ' + e(rappel) + '</h2>'
+          + '<p style="margin:0">Ne l\'utilisez pas. Rapportez-le là où vous l\'avez obtenu.</p></div>' : '')
+        + '<div class="carte"><p class="surtitre">' + (echantillon ? 'Échantillon' : 'Sachet') + '</p><h1>' + e(D.variete) + '</h1><div class="poids">' + e(poids(D.poids_g)) + '</div>'
         + (echantillon ? '<div class="echantillon">ÉCHANTILLON — NE PEUT ÊTRE VENDU</div>' : '')
         + '<div class="infos"><div><small>Identifiant</small><b>' + e(D.id) + '</b></div>'
         + '<div><small>Année de culture</small><b>' + (D.annee_culture ? e(D.annee_culture) : '—') + '</b></div>'
         + (I.lot ? '<div><small>N° de lot</small><b>' + e(I.lot) + '</b></div>' : '') + '</div>'
-        + (conforme === null ? '' : '<span class="statut ' + (conforme ? 'bon' : 'critique') + '">' + (conforme ? ICONE_OK + 'Analysé · THC total ≤ ' + nombre(Number(A.limite_thc) || LIMITE_THC, 2) + ' %' : ICONE_NON + 'Analysé · THC total au-dessus de la limite') + '</span>') + '</div>'
+        + (conforme === null || rappel ? '' : '<span class="statut ' + (conforme ? 'bon' : 'critique') + '">' + (conforme ? ICONE_OK + 'Analysé · THC total ≤ ' + nombre(Number(A.limite_thc) || LIMITE_THC, 2) + ' %' : ICONE_NON + 'Analysé · THC total au-dessus de la limite') + '</span>') + '</div>'
         + (A && A.cannabinoides ? sectionChiffres(A) + sectionCannabinoides(A) : sectionAnalyseEnCours())
         + (A && A.terpenes_mg_g ? sectionTerpenes(A) : '')
         + sectionOrigine(I) + sectionDates(I)
