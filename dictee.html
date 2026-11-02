@@ -43,14 +43,20 @@
   if (!/^[a-f0-9]{16,40}$/.test(code) || !retourValide) { etat('Ouvrez cette page avec le bouton 🎤 d\'une note de l\'appli.'); $('micro').disabled = true; return; }
   var Reco = window.SpeechRecognition || window.webkitSpeechRecognition, reco = null, ecoute = false, base = '';
   var ANDROID = /Android/i.test(navigator.userAgent), simple = function (t) { return t.toLowerCase().replace(/\s+/g, ' ').trim(); };
+  // Chrome sur Android coupe l'écoute après 1 s de silence, même en continu (Manu, 02/11/2026) : on la relance toute seule
+  // tant qu'on n'a pas touché ⏹, jusqu'à SILENCE_MAX sans rien entendre.
+  var garder = false, dernierSon = 0, SILENCE_MAX = 20000;
+  var relancer = function () { return ANDROID && garder && Date.now() - dernierSon < SILENCE_MAX; };
   var majBouton = function () { $('micro').classList.toggle('ecoute', ecoute); $('micro').textContent = ecoute ? '⏹ Arrêter' : '🎤 Parler'; $('envoyer').disabled = !$('texte').value.trim(); };
   $('texte').addEventListener('input', majBouton);
-  function demarrer() {
+  function demarrer(relance) {
     if (!Reco) { etat('Ce navigateur ne sait pas reconnaître la voix : ouvrez l\'appli avec Chrome ou Safari.'); return; }
+    if (!relance) { garder = true; dernierSon = Date.now(); }
     reco = new Reco(); reco.lang = 'fr-FR'; reco.continuous = true; reco.interimResults = true;
     base = $('texte').value ? $('texte').value.replace(/\s*$/, ' ') : '';
     reco.onresult = function (ev) {
       var fini = '', provisoire = '';
+      dernierSon = Date.now();
       if (ANDROID) {
         // Chrome sur Android : chaque morceau reprend tout ce qui a déjà été dit (« huile », puis « huile noire ») ; les mettre
         // bout à bout doublait les mots (Manu, 02/11/2026 : « huile huile noir »). Un morceau qui commence comme le précédent le remplace.
@@ -67,22 +73,31 @@
       $('texte').value = base + fini + provisoire; majBouton();
     };
     reco.onerror = function (ev) {
+      if ((ev.error === 'no-speech' || ev.error === 'aborted') && relancer()) return;     // simple pause : l'écoute repart
+      garder = false;
       etat(ev.error === 'not-allowed' || ev.error === 'service-not-allowed' ? 'Micro refusé : autorisez le micro pour cette page, puis appuyez sur 🎤.'
         : ev.error === 'no-speech' ? 'Rien entendu : appuyez sur 🎤 et parlez.' : ev.error === 'network' ? 'Pas de réseau : la dictée a besoin d\'internet.' : 'Dictée interrompue (' + ev.error + ').');
     };
-    reco.onend = function () { ecoute = false; majBouton(); if (/Parlez/.test($('etat').textContent)) etat($('texte').value.trim() ? 'Vérifiez le texte, puis « Mettre dans la note ».' : 'Appuyez sur 🎤 pour parler.'); };
-    try { reco.start(); ecoute = true; etat('Parlez… (appuyez sur ⏹ quand vous avez fini)'); } catch (e) { etat('Appuyez sur 🎤 pour parler.'); }
+    reco.onend = function () {
+      if (relancer()) { setTimeout(function () { if (garder) demarrer(true); }, 150); return; }
+      garder = false; ecoute = false; majBouton(); if (/Parlez/.test($('etat').textContent)) etat($('texte').value.trim() ? 'Vérifiez le texte, puis « Mettre dans la note ».' : 'Appuyez sur 🎤 pour parler.'); };
+    try { reco.start(); ecoute = true; etat('Parlez… (appuyez sur ⏹ quand vous avez fini)'); } catch (e) { garder = false; ecoute = false; etat('Appuyez sur 🎤 pour parler.'); }
     majBouton();
   }
-  $('micro').onclick = function () { if (ecoute && reco) reco.stop(); else demarrer(); };
-  $('annuler').onclick = function () { if (reco) reco.abort(); window.close(); etat('Vous pouvez fermer cet onglet.'); };
+  $('micro').onclick = function () {
+    if (!ecoute) return demarrer();
+    garder = false; ecoute = false; majBouton();
+    etat($('texte').value.trim() ? 'Vérifiez le texte, puis « Mettre dans la note ».' : 'Appuyez sur 🎤 pour parler.');
+    if (reco) reco.stop();
+  };
+  $('annuler').onclick = function () { garder = false; if (reco) reco.abort(); window.close(); etat('Vous pouvez fermer cet onglet.'); };
   // Envoi : d'abord à la fenêtre de l'appli qui a ouvert cette page (elle accuse réception) ; sinon, par l'adresse de l'appli.
   var recu = false;
   window.addEventListener('message', function (ev) { if (ev.data && ev.data.type === 'dictee-recue' && ev.data.code === code) { recu = true; window.close(); etat('✓ Texte mis dans la note. Vous pouvez fermer cet onglet.'); } });
   $('envoyer').onclick = function () {
     var texte = $('texte').value.trim().substring(0, 1500);
     if (!texte) return;
-    if (reco) reco.abort();
+    garder = false; if (reco) reco.abort();
     $('envoyer').disabled = true; etat('Envoi à l\'appli…');
     try { if (window.opener) window.opener.postMessage({ type: 'dictee-chenevia', code: code, texte: texte }, '*'); } catch (e) {}
     setTimeout(function () { if (!recu) location.href = retour + '?dictee=' + code + '&texte=' + encodeURIComponent(texte); }, 1500);
