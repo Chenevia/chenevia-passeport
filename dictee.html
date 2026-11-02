@@ -42,6 +42,7 @@
   var retourValide = /^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+\/|macros\/)s\/[A-Za-z0-9_-]+\/exec$/.test(retour);
   if (!/^[a-f0-9]{16,40}$/.test(code) || !retourValide) { etat('Ouvrez cette page avec le bouton 🎤 d\'une note de l\'appli.'); $('micro').disabled = true; return; }
   var Reco = window.SpeechRecognition || window.webkitSpeechRecognition, reco = null, ecoute = false, base = '';
+  var ANDROID = /Android/i.test(navigator.userAgent), simple = function (t) { return t.toLowerCase().replace(/\s+/g, ' ').trim(); };
   var majBouton = function () { $('micro').classList.toggle('ecoute', ecoute); $('micro').textContent = ecoute ? '⏹ Arrêter' : '🎤 Parler'; $('envoyer').disabled = !$('texte').value.trim(); };
   $('texte').addEventListener('input', majBouton);
   function demarrer() {
@@ -50,7 +51,19 @@
     base = $('texte').value ? $('texte').value.replace(/\s*$/, ' ') : '';
     reco.onresult = function (ev) {
       var fini = '', provisoire = '';
-      for (var i = 0; i < ev.results.length; i++) (ev.results[i].isFinal ? (fini += ev.results[i][0].transcript) : (provisoire += ev.results[i][0].transcript));
+      if (ANDROID) {
+        // Chrome sur Android : chaque morceau reprend tout ce qui a déjà été dit (« huile », puis « huile noire ») ; les mettre
+        // bout à bout doublait les mots (Manu, 02/11/2026 : « huile huile noir »). Un morceau qui commence comme le précédent le remplace.
+        var morceaux = [];
+        for (var j = 0; j < ev.results.length; j++) {
+          var t = ev.results[j][0].transcript.trim(), der = morceaux[morceaux.length - 1];
+          if (!t) continue;
+          if (der !== undefined && simple(t).indexOf(simple(der)) === 0) morceaux[morceaux.length - 1] = t; else morceaux.push(t);
+        }
+        fini = morceaux.join(' ');
+      } else {
+        for (var i = 0; i < ev.results.length; i++) (ev.results[i].isFinal ? (fini += ev.results[i][0].transcript) : (provisoire += ev.results[i][0].transcript));
+      }
       $('texte').value = base + fini + provisoire; majBouton();
     };
     reco.onerror = function (ev) {
