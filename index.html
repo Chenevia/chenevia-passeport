@@ -137,7 +137,7 @@
   </style>
 </head>
 <body>
-  <div class="test">Page de démonstration — données de test</div>
+  <div class="test" id="bandeau-test" hidden>Page de démonstration — données de test</div>
   <div class="page" id="page"><noscript><div class="carte vide">Activez JavaScript pour voir la fiche du sachet.</div></noscript></div>
   <div class="bulle" id="bulle"></div>
   <script>
@@ -412,6 +412,7 @@
       if (A) (A.certificats = A.certificats || []).forEach(function (c) { ['prelevement', 'reception', 'analyse', 'edition'].forEach(function (k) { c[k] = new Date(c[k]); }); });
       var I = {};
       try { I = D.infos ? JSON.parse(D.infos) || {} : {}; } catch (x) { I = {}; }
+      document.getElementById('bandeau-test').hidden = I.demo !== true;   // seulement avant la mise en service de l'appli (revue du 04/11/2026)
       var conforme = A && A.cannabinoides ? thcConforme(A.cannabinoides, Number(A.limite_thc) || LIMITE_THC) : null;
       var echantillon = /^ECH-/.test(String(D.id));   // envoyé en échantillon par Chenevia (R-STK-7)
       var rappel = String(D.rappel || '').trim();      // date du rappel de lot (R-RAP-1) ; ni motif ni n° de rappel ici
