@@ -200,13 +200,16 @@
     function totaux(c) {
       return { cbd: n0(c.CBD) + 0.877 * n0(c.CBDA), thc: n0(c.THC) + 0.877 * n0(c.THCA), cbg: n0(c.CBG) + 0.878 * n0(c.CBGA) };
     }
+    // Conforme : THC total arrondi au millième, comme l'appli pour la vente et le bon de sortie (revue du 04/11/2026) ;
+    // sans l'arrondi, 0,3001 % était « au-dessus » ici et « ≤ 0,3 % » dans l'appli.
+    function thcConforme(c, lim) { return Math.round(totaux(c).thc * 1000) / 1000 <= lim; }
     function valeurPct(v) { return v === null || v === undefined ? 'non mesuré' : v < 0.005 ? '< 0,005 %' : nombre(v, v < 0.1 ? 3 : 2) + ' %'; }
     var ICONE_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5 9-10"/></svg>';
     var ICONE_NON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>';
 
     function sectionChiffres(A) {
       var LIM = Number(A.limite_thc) || LIMITE_THC;   // limite des réglages de l'appli, 0,3 % sinon
-      var t = totaux(A.cannabinoides), conforme = t.thc <= LIM;
+      var t = totaux(A.cannabinoides), conforme = thcConforme(A.cannabinoides, LIM);
       var largeur = Math.min(100, t.thc / (LIM * 1.5) * 100), limite = LIM / (LIM * 1.5) * 100;
       return '<div class="carte"><p class="surtitre">En un coup d\'œil</p><div class="tuiles">'
         + '<div class="tuile"><small>CBD total</small><b>' + nombre(t.cbd, 2) + ' %</b><span>m/m</span></div>'
@@ -409,7 +412,7 @@
       if (A) (A.certificats = A.certificats || []).forEach(function (c) { ['prelevement', 'reception', 'analyse', 'edition'].forEach(function (k) { c[k] = new Date(c[k]); }); });
       var I = {};
       try { I = D.infos ? JSON.parse(D.infos) || {} : {}; } catch (x) { I = {}; }
-      var conforme = A && A.cannabinoides ? totaux(A.cannabinoides).thc <= (Number(A.limite_thc) || LIMITE_THC) : null;
+      var conforme = A && A.cannabinoides ? thcConforme(A.cannabinoides, Number(A.limite_thc) || LIMITE_THC) : null;
       var echantillon = /^ECH-/.test(String(D.id));   // envoyé en échantillon par Chenevia (R-STK-7)
       var rappel = String(D.rappel || '').trim();      // date du rappel de lot (R-RAP-1) ; ni motif ni n° de rappel ici
       afficher((rappel ? '<div class="carte rappel" role="alert"><p class="surtitre">Rappel de produit</p><h2>Ce produit est rappelé depuis le ' + e(rappel) + '</h2>'
