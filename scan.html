@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Chenevia — scan</title>
+  <style>
+    /* Scan en direct des QR pour l'appli Chenevia Production (R-SCAN-2). L'appli tourne dans une boîte Google qui n'a pas le droit
+       d'utiliser la caméra : cette page, ouverte par un bouton 📷 de l'appli, filme ici, lit le QR, puis renvoie son texte à l'appli
+       (message à la fenêtre qui l'a ouverte, sinon par l'adresse de l'appli) et se ferme. Aucune image n'est gardée. */
+    :root { --texte: #f8fafc; --texte-2: #cbd5e1; --fond: #0f172a; --carte: #1e293b; --bord: #334155; --vert: #15803d; --rouge: #fca5a5; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { height: 100%; }
+    body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--fond); color: var(--texte); }
+    main { max-width: 720px; margin: 0 auto; padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px; min-height: 100%; }
+    h1 { font-size: 20px; margin: 4px 0 0; }
+    #etat { color: var(--texte-2); font-size: 16px; min-height: 22px; }
+    #etat.erreur { color: var(--rouge); }
+    #etat.lu { color: #86efac; font-weight: 700; font-size: 19px; }
+    .cadre { position: relative; flex: 1; min-height: 300px; border-radius: 16px; overflow: hidden; background: #000; }
+    video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .viseur { position: absolute; left: 50%; top: 50%; width: min(70%, 70vh); aspect-ratio: 1; transform: translate(-50%, -50%);
+              border: 4px solid rgba(255, 255, 255, .9); border-radius: 18px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .35); }
+    .cadre.lu .viseur { border-color: #22c55e; }
+    button, .bouton { font: inherit; font-weight: 700; border-radius: 14px; cursor: pointer; border: 1px solid var(--bord); background: var(--carte);
+                      color: var(--texte); min-height: 60px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 12px; }
+    .bas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .bas.trois { grid-template-columns: 1fr 1fr 1fr; }
+    #lampe.allumee { background: #fde68a; color: #0f172a; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>📷 Scanner un QR</h1>
+  <div id="etat">Ouverture de la caméra…</div>
+  <div class="cadre" id="cadre"><video id="video" playsinline muted></video><div class="viseur"></div></div>
+  <div class="bas" id="bas">
+    <button type="button" id="annuler">Annuler</button>
+    <label class="bouton">🖼 Photo<input type="file" accept="image/*" capture="environment" id="photo" hidden></label>
+    <button type="button" id="lampe" hidden>🔦 Lampe</button>
+  </div>
+</main>
+<script>
+(function () {
+  var p = new URLSearchParams(location.search), code = p.get('c') || '', retour = p.get('r') || '';
+  var $ = function (id) { return document.getElementById(id); };
+  var etat = function (t, classe) { $('etat').textContent = t; $('etat').className = classe || ''; };
+  // Seule l'appli Chenevia sur Google peut recevoir le texte (pas de renvoi vers une autre adresse).
+  var retourValide = /^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+\/|macros\/)s\/[A-Za-z0-9_-]+\/exec$/.test(retour);
+  if (!/^[a-f0-9]{16,40}$/.test(code) || !retourValide) { etat('Ouvrez cette page avec un bouton 📷 de l\'appli.', 'erreur'); $('bas').hidden = true; return; }
+  var JSQR_URL = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+  var flux = null, fini = false, detecteur = null;
+  if ('BarcodeDetector' in window) { try { detecteur = new window.BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { detecteur = null; } }
+
+  function chargerJsQr() {
+    if (window.jsQR) return Promise.resolve(window.jsQR);
+    return new Promise(function (ok, ko) {
+      var s = document.createElement('script');
+      s.src = JSQR_URL; s.integrity = 'sha512-mAWCY8yiZ9B6waVV21vK4lyjPOL8Lf9evmmWGJ36ElS5hrbBET20/UgMb7kmZNXNL5vbZZspv12oCjjvRIbwHA=='; s.crossOrigin = 'anonymous';
+      s.onload = function () { ok(window.jsQR); };
+      s.onerror = function () { ko(new Error('Lecteur de QR indisponible (pas de réseau ?).')); };
+      document.head.appendChild(s);
+    });
+  }
+  // Texte du QR sur une image (vidéo, photo), ou '' : lecteur du navigateur, sinon jsQR à une ou plusieurs tailles.
+  var toile = document.createElement('canvas');
+  function lire(source, largeur, hauteur, tailles) {
+    var jsqr = function () {
+      return chargerJsQr().then(function (jsQR) {
+        for (var i = 0; i < tailles.length; i++) {
+          var k = Math.min(1, tailles[i] / Math.max(largeur, hauteur));
+          toile.width = Math.round(largeur * k); toile.height = Math.round(hauteur * k);
+          var c = toile.getContext('2d', { willReadFrequently: true }); c.drawImage(source, 0, 0, toile.width, toile.height);
+          var r = jsQR(c.getImageData(0, 0, toile.width, toile.height).data, toile.width, toile.height, { inversionAttempts: 'attemptBoth' });
+          if (r && r.data) return r.data;
+        }
+        return '';
+      });
+    };
+    if (!detecteur) return jsqr();
+    return detecteur.detect(source).then(function (r) { return r.length ? r[0].rawValue : (tailles.length > 1 ? jsqr() : ''); }, jsqr);
+  }
+
+  function arreterCamera() { if (flux) flux.getTracks().forEach(function (t) { t.stop(); }); flux = null; }
+  function boucle() {
+    if (fini) return;
+    var v = $('video');
+    if (v.readyState < 2 || !v.videoWidth) { setTimeout(boucle, 200); return; }
+    lire(v, v.videoWidth, v.videoHeight, [720]).then(function (t) { if (t && t.trim()) trouve(t); else setTimeout(boucle, 120); },
+      function () { setTimeout(boucle, 400); });
+  }
+  function demarrer() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { etat('Caméra indisponible ici : prenez une photo du QR (bouton 🖼 Photo).', 'erreur'); return; }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
+      .then(function (f) {
+        if (fini) { f.getTracks().forEach(function (t) { t.stop(); }); return; }
+        flux = f; $('video').srcObject = f; $('video').play().catch(function () {});
+        etat('Visez le QR : il est lu tout seul.');
+        var piste = f.getVideoTracks()[0], cap = piste && piste.getCapabilities ? piste.getCapabilities() : {};
+        if (cap && cap.torch) { $('lampe').hidden = false; $('bas').classList.add('trois'); }
+        boucle();
+      })
+      .catch(function (e) {
+        var n = e && e.name;
+        etat(n === 'NotAllowedError' ? 'Caméra refusée : autorisez la caméra pour cette page (icône à gauche de l\'adresse), ou prenez une photo (🖼 Photo).'
+          : n === 'NotFoundError' ? 'Pas de caméra trouvée : prenez une photo du QR (🖼 Photo).'
+          : 'La caméra ne s\'ouvre pas (' + (n || e) + ') : prenez une photo du QR (🖼 Photo).', 'erreur');
+      });
+  }
+  var lampe = false;
+  $('lampe').onclick = function () {
+    var piste = flux && flux.getVideoTracks()[0]; if (!piste) return;
+    lampe = !lampe;
+    piste.applyConstraints({ advanced: [{ torch: lampe }] }).then(function () { $('lampe').classList.toggle('allumee', lampe); }, function () { lampe = false; });
+  };
+  $('photo').onchange = function () {
+    var fichier = this.files[0]; this.value = '';
+    if (!fichier || fini) return;
+    etat('Lecture de la photo…');
+    var img = new Image(), url = URL.createObjectURL(fichier);
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      lire(img, img.width, img.height, [1200, 800, 1800]).then(function (t) {
+        if (t && t.trim()) trouve(t); else etat('QR non trouvé sur la photo : rapprochez-vous, sans reflet, et reprenez la photo.', 'erreur');
+      }, function (e) { etat(String(e && e.message || e), 'erreur'); });
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); etat('Photo illisible.', 'erreur'); };
+    img.src = url;
+  };
+  $('annuler').onclick = function () { fini = true; arreterCamera(); window.close(); etat('Vous pouvez fermer cet onglet.'); };
+
+  // Envoi : d'abord à la fenêtre de l'appli qui a ouvert cette page (elle accuse réception) ; sinon, par l'adresse de l'appli.
+  var recu = false;
+  window.addEventListener('message', function (ev) { if (ev.data && ev.data.type === 'scan-recu' && ev.data.code === code) { recu = true; window.close(); etat('✓ Envoyé à l\'appli. Vous pouvez fermer cet onglet.', 'lu'); } });
+  function trouve(texte) {
+    if (fini) return;
+    fini = true; texte = texte.trim().substring(0, 500);
+    arreterCamera(); $('cadre').classList.add('lu');
+    try { if (navigator.vibrate) navigator.vibrate(120); } catch (e) {}
+    etat('✓ Lu : ' + texte, 'lu'); $('bas').hidden = true;
+    var parServeur = function () { if (!recu) location.href = retour + '?scan=' + code + '&texte=' + encodeURIComponent(texte); };
+    var ouvreur = null; try { ouvreur = window.opener; } catch (e) {}
+    if (!ouvreur) return parServeur();
+    try { ouvreur.postMessage({ type: 'scan-chenevia', code: code, texte: texte }, '*'); } catch (e) {}
+    setTimeout(parServeur, 1500);
+  }
+  window.addEventListener('pagehide', arreterCamera);
+  demarrer();
+})();
+</script>
+</body>
+</html>
