@@ -182,7 +182,7 @@
       var chemin = location.pathname.match(/\/21\/([^\/?#]+)/) || location.pathname.match(/\/s\/([^\/?#]+)/);
       return decodeURIComponent(param || (chemin && chemin[1]) || '').trim().toUpperCase();
     }
-    function poids(g) { g = Number(g); return g >= 1000 ? nombre(g / 1000, 0) + ' kg' : g + ' g'; }
+    function poids(g) { return nombre(Math.round(Number(g) || 0), 0) + ' g'; }   // au gramme, jamais arrondi (Manu, 23/11/2026)
     function dateFr(d) { return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
     var TERPENES = [
       { nom: 'Myrcène', note: 'terreux, musqué, fruits mûrs' },
@@ -444,7 +444,8 @@
 
     var id = identifiantDemande();
     attente();
-    if (!/^S\d{6}-\d{4}$/.test(id) && !/^ECH-\d{6}-\d{2,3}(-\d+)?$/.test(id)) introuvable();
+    if (!/^S\d{6}-\d{4}$/.test(id) && !/^ECH-\d{6}-\d{2,3}(-\d+)?$/.test(id)
+        && !/^[A-Z]{3}-(BB|MB|SB)-\d{3,}$/.test(id) && !/^[A-Z0-9]{6,}-S\d{2,}$/.test(id)) introuvable();   // sacs de vente (FIN-MB-001) et sacs d'un seul lot (…-S01), 23/11/2026
     else if (!URL_CSV) afficher('<div class="carte vide">Page en cours de mise en service.</div>');
     else {
       // Google sert la version publiée depuis plusieurs serveurs, mis à jour à quelques minutes d'écart : un sachet tout juste
