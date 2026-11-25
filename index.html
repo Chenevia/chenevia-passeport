@@ -410,10 +410,11 @@
     function ficheCarton(D, I) {
       document.getElementById('bandeau-test').hidden = I.demo !== true;
       var ligne = function (gauche, droite) { return '<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #e8edf3">' + gauche + '<b style="white-space:nowrap">' + droite + '</b></div>'; };
-      afficher('<div class="carte"><p class="surtitre">Carton</p><h1>' + e(D.variete || '') + '</h1><div class="poids">' + e(poids(D.poids_g)) + '</div>'
+      var avecPages = (I.contenu || []).some(function (x) { return x.page; });
+      afficher('<div class="carte"><p class="surtitre">' + (I.trim ? 'Carton de trim' : 'Carton') + '</p><h1>' + e(D.variete || '') + '</h1><div class="poids">' + e(poids(D.poids_g)) + '</div>'
         + '<div class="infos"><div><small>Carton</small><b>' + e(D.id) + '</b></div><div><small>Année de culture</small><b>' + (D.annee_culture ? e(D.annee_culture) : '—') + '</b></div></div></div>'
         + '<div class="carte"><p class="surtitre">Par taille</p>' + (I.tailles || []).map(function (t) { return ligne('<span>' + e(t.taille) + '</span>', e(poids(t.masse_g))); }).join('') + '</div>'
-        + '<div class="carte"><p class="surtitre">Contenu du carton</p><p class="vide" style="margin-top:0">Touchez un sac pour voir son détail : analyses, origine et parcours.</p>'
+        + '<div class="carte"><p class="surtitre">Contenu du carton</p>' + (avecPages ? '<p class="vide" style="margin-top:0">Touchez un sac pour voir son détail : analyses, origine et parcours.</p>' : '')
         + (I.contenu || []).map(function (x) {
           var nom = x.page ? '<a href="?s=' + encodeURIComponent(x.id) + '"><b>' + e(x.id) + '</b></a>' : '<b>' + e(x.id) + '</b>';
           return ligne('<span>' + nom + ' · ' + e(x.taille) + (x.sessions ? '<br><small>sessions ' + e(x.sessions) + '</small>' : '') + '</span>', e(poids(x.masse_g)));
@@ -461,7 +462,7 @@
     var id = identifiantDemande();
     attente();
     if (!/^S\d{6}-\d{4}$/.test(id) && !/^ECH-\d{6}-\d{2,3}(-\d+)?$/.test(id)
-        && !/^[A-Z]{3}-(BB|MB|SB)-\d{3,}$/.test(id) && !/^[A-Z0-9]{6,}-S\d{2,}$/.test(id) && !/^CT-\d{4,}$/.test(id)) introuvable();   // + cartons (CT-0003)   // sacs de vente (FIN-MB-001) et sacs d'un seul lot (…-S01), 23/11/2026
+        && !/^[A-Z]{3}-(BB|MB|SB)-\d{3,}$/.test(id) && !/^[A-Z0-9]{6,}-S\d{2,}$/.test(id) && !/^(CT|TR)-\d{4,}$/.test(id)) introuvable();   // + cartons (CT-0003 fleurs, TR-0001 trim : R-CART-9, 25/11/2026)   // sacs de vente (FIN-MB-001) et sacs d'un seul lot (…-S01), 23/11/2026
     else if (!URL_CSV) afficher('<div class="carte vide">Page en cours de mise en service.</div>');
     else {
       // Google sert la version publiée depuis plusieurs serveurs, mis à jour à quelques minutes d'écart : un sachet tout juste
